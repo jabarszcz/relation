@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Data.RelationSpec
   ( spec
   ) where
@@ -198,4 +199,7 @@ spec = describe "Data.RelationSpec" $ do
       let relgen = DR.fromList <$> G.list (R.linear 0 100) entrygen
       (ra, rb, rc) <- forAll $ (,,) <$> relgen <*> relgen <*> relgen
       let (<.>) = DR.compose
-      ((ra <.> rb) <.> rc) === (ra <.> (rb <.> rc))
+      let left  = (ra <.>  rb) <.> rc
+      let right =  ra <.> (rb  <.> rc)
+      cover 30 "non-empty composed relation" $ not $ DR.null right
+      left === right
