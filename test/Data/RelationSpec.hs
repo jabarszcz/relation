@@ -193,3 +193,9 @@ spec = describe "Data.RelationSpec" $ do
         <*> G.alpha
       let r = DR.fromList as
       DR.withoutRan (DR.ran r) r === DR.empty
+    it "Associativity of composition" $ require $ property $ do
+      let entrygen = (,) <$> G.alpha <*> G.alpha
+      let relgen = DR.fromList <$> G.list (R.linear 0 100) entrygen
+      (ra, rb, rc) <- forAll $ (,,) <$> relgen <*> relgen <*> relgen
+      let (<.>) = DR.compose
+      ((ra <.> rb) <.> rc) === (ra <.> (rb <.> rc))
