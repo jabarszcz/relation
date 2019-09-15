@@ -38,8 +38,10 @@ module Data.Relation (
   , empty           -- Construct an empty relation.
   , fromList        -- Relation <- []
   , singleton       -- Construct a relation with a single element.
+  , cartesian       -- Construct a relation as a cartesian product of two sets.
 
     -- ** Operations
+  , compose         -- Composition of two relations.
   , union           -- Union of two relations.
   , unions          -- Union on a list of relations.
   , intersection    -- Intersection of two relations.
@@ -104,12 +106,34 @@ toList :: Relation a b -> [(a, b)]
 toList r = concatMap (\(x, y) -> zip (repeat x) (S.toList y)) (M.toList . R.domain $ r)
 
 -- |
--- Builds a 'Relation' consiting of an association between: @x@ and @y@.
+-- Builds a 'Relation' consisting of an association between: @x@ and @y@.
 singleton :: a -> b -> Relation a b
 singleton x y  = Relation
   { R.domain  = M.singleton x (S.singleton y)
   , R.range   = M.singleton y (S.singleton x)
   }
+
+-- | Builds a 'Relation' consisting of all possible associations
+-- between members of the sets @r@ and @s@.
+cartesian :: Set a -> Set b -> Relation a b
+cartesian r s = Relation
+  { R.domain  = M.fromSet (const s) r
+  , R.range   = M.fromSet (const r) s
+  }
+
+-- | Composes two relations @r@ and @s@ by taking all the associations
+-- @(x,z)@ such that there exists a @y@ for which @'member' x y r@ and
+-- @'member' y z s@.
+compose :: (Ord a, Ord b, Ord c) => Relation a b -> Relation b c -> Relation a c
+compose r s =
+  unions $ merge (M.toAscList $ R.range r) (M.toAscList $ R.domain s)
+  where
+    merge rlist@((rkey, rset):rrest) slist@((skey, sset):srest) =
+      case compare rkey skey of
+        EQ -> cartesian rset sset : merge rrest srest
+        LT -> merge rrest slist
+        GT -> merge rlist srest
+    merge _ _ = []
 
 -- | The 'Relation' that results from the union of two relations: @r@ and @s@.
 union :: (Ord a, Ord b) => Relation a b -> Relation a b -> Relation a b
