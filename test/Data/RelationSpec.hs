@@ -203,3 +203,43 @@ spec = describe "Data.RelationSpec" $ do
       let right =  ra <.> (rb  <.> rc)
       cover 30 "non-empty composed relation" $ not $ DR.null right
       left === right
+    it "A relation contains itself" $ require $ property $ do
+      as <- forAll $ G.list (R.linear 0 10) $ (,)
+        <$> G.int R.constantBounded
+        <*> G.alpha
+      let r = DR.fromList as
+      assert $ r `DR.contains` r
+    it "A relation contains empty" $ require $ property $ do
+      as <- forAll $ G.list (R.linear 0 10) $ (,)
+        <$> G.int R.constantBounded
+        <*> G.alpha
+      let r = DR.fromList as
+      assert $ r `DR.contains` DR.empty
+    it "containement in domain × range" $ require $ property $ do
+      as <- forAll $ G.list (R.linear 0 10) $ (,)
+        <$> G.int R.constantBounded
+        <*> G.alpha
+      let r = DR.fromList as
+      assert $ DR.cartesian (DR.dom r) (DR.ran r) `DR.contains` r
+    it "composition with converse contains identity" $ require $ property $ do
+      as <- forAll $ G.list (R.linear 0 10) $ (,)
+        <$> G.int R.constantBounded
+        <*> G.alpha
+      let r = DR.fromList as
+      assert $ (r `DR.compose` DR.converse r) `DR.contains` DR.identity (DR.dom r)
+      assert $ (DR.converse r `DR.compose` r) `DR.contains` DR.identity (DR.ran r)
+    it "identity is the neutral element of composition" $ require $ property $ do
+      as <- forAll $ G.list (R.linear 0 10) $ (,)
+        <$> G.int R.constantBounded
+        <*> G.alpha
+      let r = DR.fromList as
+      r `DR.compose` DR.identity (DR.ran r) === r
+      DR.identity (DR.dom r) `DR.compose` r === r
+    it "empty is the zero element of composition" $ require $ property $ do
+      as <- forAll $ G.list (R.linear 0 10) $ (,)
+        <$> G.int R.constantBounded
+        <*> G.int R.constantBounded
+      let r = DR.fromList as
+      let empty = DR.empty :: DR.Relation Int Int
+      r `DR.compose` empty === empty
+      empty `DR.compose` r === empty

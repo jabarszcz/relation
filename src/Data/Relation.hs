@@ -38,6 +38,7 @@ module Data.Relation (
   , empty           -- Construct an empty relation.
   , fromList        -- Relation <- []
   , singleton       -- Construct a relation with a single element.
+  , identity        -- Construct the identity relation on a set.
   , cartesian       -- Construct a relation as a cartesian product of two sets.
 
     -- ** Operations
@@ -53,6 +54,7 @@ module Data.Relation (
   , memberRan       -- Is the element in the range?
   , member          -- Is the tuple   in the relation?
   , notMember
+  , contains        -- Does a relation contain all the tuples from another?
   , restrictDom     -- Restrict the domain to that of the provided set
   , restrictRan     -- Restrict the range to that of the provided set
   , withoutDom      -- Restrict the domain to exclude elements of the provided set
@@ -111,6 +113,14 @@ singleton :: a -> b -> Relation a b
 singleton x y  = Relation
   { R.domain  = M.singleton x (S.singleton y)
   , R.range   = M.singleton y (S.singleton x)
+  }
+
+-- | Builds the identity relation on the given set. Each element is
+-- related to itself.
+identity :: Set a -> Relation a a
+identity s = Relation
+  { R.domain  = M.fromSet S.singleton s
+  , R.range   = M.fromSet S.singleton s
   }
 
 -- | Builds a 'Relation' consisting of all possible associations
@@ -202,13 +212,26 @@ memberRan y r = not . S.null $ lookupRan y r
 null :: Relation a b -> Bool
 null r = M.null $ R.domain r
 
--- | True if the relation contains the association @x@ and @y@
+-- | True if the relation has the association @x@ and @y@
 member :: (Ord a, Ord b) => a -> b -> Relation a b -> Bool
 member x y r = S.member y (lookupDom x r)
 
--- | True if the relation /does not/ contain the association @x@ and @y@
+-- | True if the relation /does not/ have the association @x@ and @y@
 notMember :: (Ord a, Ord b) => a -> b -> Relation a b -> Bool
 notMember x y r = not $ member x y r
+
+-- | True if @r@ contains all the associations of @s@.
+contains :: (Ord a, Ord b) => Relation a b -> Relation a b -> Bool
+contains r s =
+  contains' (M.toAscList $ R.domain r) (M.toAscList $ R.domain s)
+  where
+    contains' rlist@((rkey, rset):rrest) ((skey, sset):srest) =
+      case compare rkey skey of
+        EQ -> sset `S.isSubsetOf` rset && contains' rrest srest
+        GT -> contains' rlist srest
+        LT -> False
+    contains' _ [] = True
+    contains' [] _ = False
 
 -- | Returns the domain in the relation, as a Set, in its entirety.
 dom :: Relation a b -> Set a
